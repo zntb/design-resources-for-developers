@@ -1,14 +1,11 @@
 # Code Owners
+
 # https://help.github.com/articles/about-code-owners/
 
-# Default owner for all files
-* @zntb
+# This file is used to define code owners for the repository.
 
-# Code owner for resources.md - requires approval for changes
-resources.md @zntb
+# Code owners are automatically requested for review when someone opens a pull request that modifies code they own.
 
-# Code owner for CI/CD workflow
-.github/workflows/seed-resources.yml @zntb
+# Default ownership - all files
 
-# Code owner for database seeding
-prisma/seed.ts @zntb
+- @zntb
