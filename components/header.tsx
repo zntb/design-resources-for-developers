@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -16,24 +16,14 @@ interface HeaderProps {
 export function Header({ className }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const initialized = useRef(false);
   const router = useRouter();
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
-
-    if (!initialized.current) {
-      initialized.current = true;
-      setIsScrolled(window.scrollY > 20);
-    }
-
     window.addEventListener('scroll', handleScroll);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const toggleMobileMenu = () => {
