@@ -30,7 +30,7 @@ export function ViewToggle({ className }: ViewToggleProps) {
   return (
     <div
       className={cn(
-        'flex items-center gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700',
+        'flex items-center gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60',
         className,
       )}
       role='group'
@@ -43,8 +43,8 @@ export function ViewToggle({ className }: ViewToggleProps) {
         className={cn(
           'gap-1.5 px-3 h-8',
           currentView === 'grid'
-            ? 'bg-white dark:bg-slate-700 shadow-sm'
-            : 'hover:bg-slate-200 dark:hover:bg-slate-700',
+            ? 'bg-white dark:bg-slate-700/60 shadow-sm'
+            : 'hover:bg-slate-200 dark:hover:bg-slate-700/40',
         )}
         aria-pressed={currentView === 'grid'}
         aria-label='Grid view'
@@ -59,8 +59,8 @@ export function ViewToggle({ className }: ViewToggleProps) {
         className={cn(
           'gap-1.5 px-3 h-8',
           currentView === 'list'
-            ? 'bg-white dark:bg-slate-700 shadow-sm'
-            : 'hover:bg-slate-200 dark:hover:bg-slate-700',
+            ? 'bg-white dark:bg-slate-700/60 shadow-sm'
+            : 'hover:bg-slate-200 dark:hover:bg-slate-700/40',
         )}
         aria-pressed={currentView === 'list'}
         aria-label='List view'
