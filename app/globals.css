@@ -120,6 +120,22 @@
       transparent 100%
     );
   }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: 220 20% 8%;
+      --bg-secondary: 220 25% 12%;
+      --fg: 0 0% 98%;
+      --fg-muted: 0 0% 70%;
+      --fg-subtle: 0 0% 50%;
+      --card: 220 20% 12%;
+      --card-foreground: 0 0% 98%;
+      --card-border: 220 15% 25%;
+      --border: 220 15% 25%;
+      --input: 220 15% 25%;
+      --ring: 195 80% 65%;
+    }
+  }
 }
 
 @layer base {
