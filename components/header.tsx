@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useLayoutEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Search, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -15,33 +15,24 @@ interface HeaderProps {
 
 export function Header({ className }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(() =>
-    typeof window !== 'undefined' ? window.scrollY > 20 : false,
-  );
-  const [isDarkMode, setIsDarkMode] = useState(() =>
-    typeof window !== 'undefined'
-      ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      : false,
-  );
+  const [isScrolled, setIsScrolled] = useState(false);
+  const initialized = useRef(false);
   const router = useRouter();
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
+  useLayoutEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
 
-    const handleThemeChange = (event: MediaQueryListEvent) => {
-      setIsDarkMode(event.matches);
-    };
+    if (!initialized.current) {
+      initialized.current = true;
+      setIsScrolled(window.scrollY > 20);
+    }
 
     window.addEventListener('scroll', handleScroll);
-    mediaQuery.addEventListener('change', handleThemeChange);
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      mediaQuery.removeEventListener('change', handleThemeChange);
     };
   }, []);
 
@@ -53,14 +44,9 @@ export function Header({ className }: HeaderProps) {
     <>
       <header
         className={cn(
-          'sticky top-0 z-50 w-full transition-all duration-300',
-          isScrolled
-            ? isDarkMode
-              ? 'bg-slate-950/88 backdrop-blur-xl border-b border-slate-800/70 shadow-sm'
-              : 'bg-white/88 backdrop-blur-xl border-b border-slate-200/70 shadow-sm'
-            : isDarkMode
-              ? 'bg-slate-950/78 backdrop-blur-xl border-b border-slate-800/60'
-              : 'bg-white/78 backdrop-blur-xl border-b border-slate-200/50',
+          'sticky top-0 z-50 w-full transition-all duration-300 bg-white/78 backdrop-blur-xl border-b border-slate-200/50 dark:bg-slate-950/78 dark:border-slate-800/60',
+          isScrolled &&
+            'bg-white/88 backdrop-blur-xl border-b border-slate-200/70 shadow-sm dark:bg-slate-950/88 dark:border-slate-800/70 dark:shadow-sm',
           className,
         )}
       >
