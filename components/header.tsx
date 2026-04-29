@@ -15,15 +15,34 @@ interface HeaderProps {
 
 export function Header({ className }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(() =>
+    typeof window !== 'undefined' ? window.scrollY > 20 : false,
+  );
+  const [isDarkMode, setIsDarkMode] = useState(() =>
+    typeof window !== 'undefined'
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : false,
+  );
   const router = useRouter();
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
+
+    const handleThemeChange = (event: MediaQueryListEvent) => {
+      setIsDarkMode(event.matches);
+    };
+
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    mediaQuery.addEventListener('change', handleThemeChange);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      mediaQuery.removeEventListener('change', handleThemeChange);
+    };
   }, []);
 
   const toggleMobileMenu = () => {
@@ -36,8 +55,12 @@ export function Header({ className }: HeaderProps) {
         className={cn(
           'sticky top-0 z-50 w-full transition-all duration-300',
           isScrolled
-            ? 'bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm'
-            : 'bg-transparent border-transparent',
+            ? isDarkMode
+              ? 'bg-slate-950/88 backdrop-blur-xl border-b border-slate-800/70 shadow-sm'
+              : 'bg-white/88 backdrop-blur-xl border-b border-slate-200/70 shadow-sm'
+            : isDarkMode
+              ? 'bg-slate-950/78 backdrop-blur-xl border-b border-slate-800/60'
+              : 'bg-white/78 backdrop-blur-xl border-b border-slate-200/50',
           className,
         )}
       >
