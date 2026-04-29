@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Share2, Mail, Link2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -101,12 +102,15 @@ export function ShareButtons({
 }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node) && menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowShareMenu(false);
       }
     };
@@ -139,9 +143,17 @@ export function ShareButtons({
         }
       }
     }
-    // Show share menu on desktop
+    // Calculate position and show share menu on desktop
+    if (buttonRef.current) {
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      setMenuPosition({
+        top: buttonRect.bottom + 8, // mt-2 = 8px
+        left: buttonRect.right - 180, // min-w-[180px], align right
+      });
+    }
     setShowShareMenu(!showShareMenu);
   };
+
 
   const handleCopyLink = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -163,6 +175,7 @@ export function ShareButtons({
 
   const renderShareButton = () => (
     <Button
+      ref={buttonRef}
       variant={variant}
       size={size}
       onClick={handleShare}
@@ -183,7 +196,7 @@ export function ShareButtons({
   );
 
   return (
-    <div className={cn('relative', className)} ref={menuRef}>
+    <div className={cn('relative', className)} ref={containerRef}>
       {showTooltip ? (
         <TooltipProvider delayDuration={300}>
           <Tooltip>
@@ -196,62 +209,70 @@ export function ShareButtons({
       )}
 
       {/* Share Options Dropdown */}
-      {showShareMenu && (
-        <div
-          className={cn(
-            'absolute right-0 top-full mt-2 z-50',
-            'bg-white dark:bg-slate-900',
-            'rounded-lg shadow-lg border border-slate-200 dark:border-slate-700',
-            'py-2 min-w-[180px]',
-            'animate-in fade-in zoom-in-95 duration-200',
-          )}
-        >
-          {/* Copy Link Option */}
-          <button
-            onClick={handleCopyLink}
+      {showShareMenu &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{
+              position: 'fixed',
+              top: menuPosition.top,
+              left: menuPosition.left,
+            }}
             className={cn(
-              'w-full px-4 py-2 text-left text-sm',
-              'flex items-center gap-3',
-              'text-slate-700 dark:text-slate-300',
-              'hover:bg-slate-100 dark:hover:bg-slate-800',
-              'transition-colors',
+              'z-50',
+              'bg-white dark:bg-slate-900',
+              'rounded-lg shadow-lg border border-slate-200 dark:border-slate-700',
+              'py-2 min-w-[180px]',
+              'animate-in fade-in zoom-in-95 duration-200',
             )}
           >
-            {copied ? (
-              <>
-                <Check className='w-4 h-4 text-green-500' />
-                <span className='text-green-500'>Copied!</span>
-              </>
-            ) : (
-              <>
-                <Link2 className='w-4 h-4' />
-                <span>Copy Link</span>
-              </>
-            )}
-          </button>
-
-          <div className='h-px bg-slate-200 dark:bg-slate-700 my-1' />
-
-          {/* Social Media Options */}
-          {shareOptions.map(option => (
+            {/* Copy Link Option */}
             <button
-              key={option.name}
-              onClick={e => handleShareTo(option, e)}
+              onClick={handleCopyLink}
               className={cn(
                 'w-full px-4 py-2 text-left text-sm',
                 'flex items-center gap-3',
                 'text-slate-700 dark:text-slate-300',
-                option.color,
                 'hover:bg-slate-100 dark:hover:bg-slate-800',
                 'transition-colors',
               )}
             >
-              {option.icon}
-              <span>Share on {option.name}</span>
+              {copied ? (
+                <>
+                  <Check className='w-4 h-4 text-green-500' />
+                  <span className='text-green-500'>Copied!</span>
+                </>
+              ) : (
+                <>
+                  <Link2 className='w-4 h-4' />
+                  <span>Copy Link</span>
+                </>
+              )}
             </button>
-          ))}
-        </div>
-      )}
+
+            <div className='h-px bg-slate-200 dark:bg-slate-700 my-1' />
+
+            {/* Social Media Options */}
+            {shareOptions.map(option => (
+              <button
+                key={option.name}
+                onClick={e => handleShareTo(option, e)}
+                className={cn(
+                  'w-full px-4 py-2 text-left text-sm',
+                  'flex items-center gap-3',
+                  'text-slate-700 dark:text-slate-300',
+                  option.color,
+                  'hover:bg-slate-100 dark:hover:bg-slate-800',
+                  'transition-colors',
+                )}
+              >
+                {option.icon}
+                <span>Share on {option.name}</span>
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
