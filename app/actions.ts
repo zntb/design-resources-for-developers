@@ -148,7 +148,7 @@ export async function updateCategoryAction(
 
     // Update resources.md
     if (oldSlug && (validated.name || validated.description !== undefined)) {
-      const mdResult = updateCategoryInResourcesMD(oldSlug, {
+      const mdResult = updateCategoryInResourcesMD(oldSlug, oldCategory.name, {
         name: validated.name || oldCategory.name,
         description: validated.description,
       });
@@ -224,11 +224,16 @@ export async function createLink(
     const category = await getCategoryById(validated.categoryId);
     if (category) {
       // Update resources.md
-      const mdResult = addLinkToResourcesMD(category.id, category.slug, {
+      const mdResult = addLinkToResourcesMD(
+        category.id,
+        category.slug,
+        category.name,
+        {
         title: link.title,
         url: link.url,
         description: link.description,
-      });
+      },
+      );
 
       if (!mdResult.success) {
         console.warn(`Failed to update resources.md: ${mdResult.error}`);
@@ -273,11 +278,17 @@ export async function updateLinkAction(
 
     // Update resources.md
     if (oldTitle && oldUrl && categorySlug) {
-      const mdResult = updateLinkInResourcesMD(categorySlug, oldTitle, oldUrl, {
-        title: validated.title || oldTitle,
-        url: validated.url || oldUrl,
-        description: validated.description ?? oldLink?.description,
-      });
+      const mdResult = updateLinkInResourcesMD(
+        categorySlug,
+        category?.name,
+        oldTitle,
+        oldUrl,
+        {
+          title: validated.title || oldTitle,
+          url: validated.url || oldUrl,
+          description: validated.description ?? oldLink?.description,
+        },
+      );
 
       if (!mdResult.success) {
         console.warn(`Failed to update resources.md: ${mdResult.error}`);
@@ -320,6 +331,7 @@ export async function deleteLinkAction(
     if (linkTitle && linkUrl && categorySlug) {
       const mdResult = deleteLinkFromResourcesMD(
         categorySlug,
+        category?.name,
         linkTitle,
         linkUrl,
       );
