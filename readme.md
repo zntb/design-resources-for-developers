@@ -29,6 +29,16 @@ A curated collection of design resources for developers. Built with Next.js, thi
   - Most popular categories
   - Daily/weekly/monthly trends
 
+### Automatic resources.md Synchronization
+
+When an admin adds, updates, or deletes a category or link through the admin interface, the [`resources.md`](resources.md) file is automatically updated to keep the source of truth in sync with the database. This ensures:
+
+- **Create**: New categories and links are automatically appended to `resources.md`
+- **Update**: Modified categories and links are automatically updated in `resources.md`
+- **Delete**: Removed categories and links are automatically removed from `resources.md`
+
+This feature eliminates the need for manual updates to `resources.md` when managing resources through the admin dashboard.
+
 ## 🔄 CI/CD Automation
 
 This project uses GitHub Actions for automated database seeding:

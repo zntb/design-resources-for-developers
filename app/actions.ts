@@ -22,14 +22,24 @@ import {
   createLink as createLinkData,
   updateLink as updateLinkData,
   deleteLink as deleteLinkData,
+  getLinkById,
   searchLinks,
   searchLinksByCategory,
   searchLinksWithCategorySlug,
   incrementLinkClicks,
+  getCategoryById,
   SortOrder,
 } from '@/lib/data';
 import { revalidatePath } from 'next/cache';
 import { getCurrentAdminEmail } from '@/lib/admin-auth';
+import {
+  addLinkToResourcesMD,
+  addCategoryToResourcesMD,
+  updateLinkInResourcesMD,
+  updateCategoryInResourcesMD,
+  deleteLinkFromResourcesMD,
+  deleteCategoryFromResourcesMD,
+} from '@/lib/resources-md';
 
 async function ensureAdmin() {
   const adminEmail = await getCurrentAdminEmail();
@@ -93,7 +103,18 @@ export async function createCategory(
     };
 
     const validated = categorySchema.parse(data);
-    await createCategoryData(validated);
+    const category = await createCategoryData(validated);
+
+    // Update resources.md
+    const mdResult = addCategoryToResourcesMD({
+      name: category.name,
+      description: category.description,
+    });
+
+    if (!mdResult.success) {
+      console.warn(`Failed to update resources.md: ${mdResult.error}`);
+    }
+
     revalidatePath('/');
     return { success: true };
   } catch (error) {
@@ -118,7 +139,25 @@ export async function updateCategoryAction(
     };
 
     const validated = updateCategorySchema.parse(data);
+
+    // Get the old category to find its slug
+    const oldCategory = await getCategoryById(validated.id);
+    const oldSlug = oldCategory?.slug;
+
     await updateCategoryData(validated.id, validated);
+
+    // Update resources.md
+    if (oldSlug && (validated.name || validated.description !== undefined)) {
+      const mdResult = updateCategoryInResourcesMD(oldSlug, {
+        name: validated.name || oldCategory.name,
+        description: validated.description,
+      });
+
+      if (!mdResult.success) {
+        console.warn(`Failed to update resources.md: ${mdResult.error}`);
+      }
+    }
+
     revalidatePath('/');
     return { success: true };
   } catch (error) {
@@ -139,7 +178,21 @@ export async function deleteCategoryAction(
     };
 
     const validated = deleteSchema.parse(data);
+
+    // Get the category to find its slug before deletion
+    const category = await getCategoryById(validated.id);
+    const categorySlug = category?.slug;
+
     await deleteCategoryData(validated.id);
+
+    // Update resources.md
+    if (categorySlug) {
+      const mdResult = deleteCategoryFromResourcesMD(categorySlug);
+      if (!mdResult.success) {
+        console.warn(`Failed to update resources.md: ${mdResult.error}`);
+      }
+    }
+
     revalidatePath('/');
     return { success: true };
   } catch (error) {
@@ -165,7 +218,23 @@ export async function createLink(
     };
 
     const validated = linkSchema.parse(data);
-    await createLinkData(validated);
+    const link = await createLinkData(validated);
+
+    // Get category to find its slug
+    const category = await getCategoryById(validated.categoryId);
+    if (category) {
+      // Update resources.md
+      const mdResult = addLinkToResourcesMD(category.id, category.slug, {
+        title: link.title,
+        url: link.url,
+        description: link.description,
+      });
+
+      if (!mdResult.success) {
+        console.warn(`Failed to update resources.md: ${mdResult.error}`);
+      }
+    }
+
     revalidatePath('/');
     return { success: true };
   } catch (error) {
@@ -191,7 +260,30 @@ export async function updateLinkAction(
     };
 
     const validated = updateLinkSchema.parse(data);
+
+    // Get the old link to find its details before update
+    const oldLink = await getLinkById(validated.id);
+    const oldTitle = oldLink?.title;
+    const oldUrl = oldLink?.url;
+    const categoryId = validated.categoryId || oldLink?.categoryId;
+    const category = categoryId ? await getCategoryById(categoryId) : null;
+    const categorySlug = category?.slug;
+
     await updateLinkData(validated.id, validated);
+
+    // Update resources.md
+    if (oldTitle && oldUrl && categorySlug) {
+      const mdResult = updateLinkInResourcesMD(categorySlug, oldTitle, oldUrl, {
+        title: validated.title || oldTitle,
+        url: validated.url || oldUrl,
+        description: validated.description ?? oldLink?.description,
+      });
+
+      if (!mdResult.success) {
+        console.warn(`Failed to update resources.md: ${mdResult.error}`);
+      }
+    }
+
     revalidatePath('/');
     return { success: true };
   } catch (error) {
@@ -212,7 +304,30 @@ export async function deleteLinkAction(
     };
 
     const validated = deleteSchema.parse(data);
+
+    // Get the link to find its details before deletion
+    const link = await getLinkById(validated.id);
+    const linkTitle = link?.title;
+    const linkUrl = link?.url;
+    const category = link?.categoryId
+      ? await getCategoryById(link.categoryId)
+      : null;
+    const categorySlug = category?.slug;
+
     await deleteLinkData(validated.id);
+
+    // Update resources.md
+    if (linkTitle && linkUrl && categorySlug) {
+      const mdResult = deleteLinkFromResourcesMD(
+        categorySlug,
+        linkTitle,
+        linkUrl,
+      );
+      if (!mdResult.success) {
+        console.warn(`Failed to update resources.md: ${mdResult.error}`);
+      }
+    }
+
     revalidatePath('/');
     return { success: true };
   } catch (error) {
