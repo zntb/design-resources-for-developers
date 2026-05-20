@@ -1,8 +1,38 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
 import { slugify } from './utils';
 
-const RESOURCES_FILE = join(process.cwd(), 'resources.md');
+function resolveResourcesFilePath(): string {
+  // First, resolve from the repository root relative to this file.
+  // This avoids relying on process cwd, which may differ in server action runtimes.
+  const moduleDir = dirname(fileURLToPath(import.meta.url));
+  const repoRootCandidate = join(moduleDir, '..', 'resources.md');
+  if (existsSync(repoRootCandidate)) {
+    return repoRootCandidate;
+  }
+
+  // Next.js server actions may execute with a cwd different from the repo root.
+  // Walk up from cwd until we find resources.md.
+  let currentDir = process.cwd();
+
+  while (true) {
+    const candidate = join(currentDir, 'resources.md');
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+
+    const parentDir = dirname(currentDir);
+    if (parentDir === currentDir) {
+      break;
+    }
+    currentDir = parentDir;
+  }
+
+  return join(process.cwd(), 'resources.md');
+}
+
+const RESOURCES_FILE = resolveResourcesFilePath();
 
 interface ResourcesMDEntry {
   title: string;
@@ -19,19 +49,10 @@ interface CategorySection {
 
 function isCategorySectionHeading(lines: string[], index: number): boolean {
   const header = lines[index]?.trim().toLowerCase();
-  if (!header?.startsWith('## ') || header === '## table of contents') {
-    return false;
-  }
 
-  const lookaheadEnd = Math.min(lines.length - 1, index + 12);
-  for (let i = index + 1; i <= lookaheadEnd; i++) {
-    const line = lines[i];
-    if (line.includes('| Website') || line.includes('| ---')) {
-      return true;
-    }
-  }
-
-  return false;
+  // Treat all level-2 headings (except the TOC heading) as category sections.
+  // Some sections may vary in table formatting, so table-based detection is brittle.
+  return Boolean(header?.startsWith('## ') && header !== '## table of contents');
 }
 
 function logVerification(message: string): void {
@@ -81,7 +102,41 @@ function findCategorySection(
   sections: CategorySection[],
   categorySlug: string,
 ): CategorySection | undefined {
-  return sections.find(s => s.slug === categorySlug);
+  const normalizedSlug = slugify(decodeURIComponent(categorySlug).trim());
+
+  return sections.find(section => {
+    const sectionSlug = slugify(section.slug.trim());
+    const sectionNameSlug = slugify(section.name.trim());
+
+    return (
+      sectionSlug === normalizedSlug ||
+      sectionNameSlug === normalizedSlug ||
+      sectionSlug.includes(normalizedSlug) ||
+      normalizedSlug.includes(sectionSlug)
+    );
+  });
+}
+
+function findCategorySectionBySlugOrName(
+  sections: CategorySection[],
+  categorySlug: string,
+  categoryName?: string,
+): CategorySection | undefined {
+  const bySlug = findCategorySection(sections, categorySlug);
+  if (bySlug) {
+    return bySlug;
+  }
+
+  if (!categoryName) {
+    return undefined;
+  }
+
+  const normalizedNameSlug = slugify(categoryName.trim());
+  return sections.find(
+    section =>
+      slugify(section.name.trim()) === normalizedNameSlug ||
+      slugify(section.slug.trim()) === normalizedNameSlug,
+  );
 }
 
 /**
@@ -151,6 +206,7 @@ function formatLinkEntry(entry: ResourcesMDEntry): string {
 export function addLinkToResourcesMD(
   categoryId: string,
   categorySlug: string,
+  categoryName: string | undefined,
   link: ResourcesMDEntry,
 ): { success: boolean; error?: string; message?: string } {
   try {
@@ -163,7 +219,11 @@ export function addLinkToResourcesMD(
     const sections = parseCategorySections(content);
 
     // Find the category section
-    const section = findCategorySection(sections, categorySlug);
+    const section = findCategorySectionBySlugOrName(
+      sections,
+      categorySlug,
+      categoryName,
+    );
 
     if (!section) {
       return {
@@ -421,6 +481,7 @@ export function updateTableOfContents(): { success: boolean; error?: string } {
  */
 export function updateLinkInResourcesMD(
   categorySlug: string,
+  categoryName: string | undefined,
   oldTitle: string,
   oldUrl: string,
   newLink: ResourcesMDEntry,
@@ -435,7 +496,11 @@ export function updateLinkInResourcesMD(
     const sections = parseCategorySections(content);
 
     // Find the category section
-    const section = findCategorySection(sections, categorySlug);
+    const section = findCategorySectionBySlugOrName(
+      sections,
+      categorySlug,
+      categoryName,
+    );
 
     if (!section) {
       return {
@@ -495,6 +560,7 @@ export function updateLinkInResourcesMD(
  */
 export function deleteLinkFromResourcesMD(
   categorySlug: string,
+  categoryName: string | undefined,
   title: string,
   url: string,
 ): { success: boolean; error?: string; message?: string } {
@@ -508,7 +574,11 @@ export function deleteLinkFromResourcesMD(
     const sections = parseCategorySections(content);
 
     // Find the category section
-    const section = findCategorySection(sections, categorySlug);
+    const section = findCategorySectionBySlugOrName(
+      sections,
+      categorySlug,
+      categoryName,
+    );
 
     if (!section) {
       return {
@@ -567,6 +637,7 @@ export function deleteLinkFromResourcesMD(
  */
 export function updateCategoryInResourcesMD(
   oldSlug: string,
+  oldName: string | undefined,
   newCategory: { name: string; description?: string },
 ): { success: boolean; error?: string; message?: string } {
   try {
@@ -579,7 +650,7 @@ export function updateCategoryInResourcesMD(
     const sections = parseCategorySections(content);
 
     // Find the category section
-    const section = findCategorySection(sections, oldSlug);
+    const section = findCategorySectionBySlugOrName(sections, oldSlug, oldName);
 
     if (!section) {
       return {
@@ -652,7 +723,11 @@ export function deleteCategoryFromResourcesMD(categorySlug: string): {
     const sections = parseCategorySections(content);
 
     // Find the category section
-    const section = findCategorySection(sections, categorySlug);
+    const section = findCategorySectionBySlugOrName(
+      sections,
+      categorySlug,
+      undefined,
+    );
 
     if (!section) {
       return {
