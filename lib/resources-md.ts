@@ -17,6 +17,28 @@ interface CategorySection {
   endLine: number;
 }
 
+function isCategorySectionHeading(lines: string[], index: number): boolean {
+  const header = lines[index]?.trim().toLowerCase();
+  if (!header?.startsWith('## ') || header === '## table of contents') {
+    return false;
+  }
+
+  const lookaheadEnd = Math.min(lines.length - 1, index + 12);
+  for (let i = index + 1; i <= lookaheadEnd; i++) {
+    const line = lines[i];
+    if (line.includes('| Website') || line.includes('| ---')) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function logVerification(message: string): void {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] VERIFIED: ${message}`);
+}
+
 /**
  * Parse the resources.md file and extract category sections
  */
@@ -28,7 +50,7 @@ function parseCategorySections(content: string): CategorySection[] {
     const line = lines[i];
     // Match category headers: ## Category Name
     const headerMatch = line.match(/^##\s+(.+)$/);
-    if (headerMatch) {
+    if (headerMatch && isCategorySectionHeading(lines, i)) {
       const name = headerMatch[1].trim();
       const slug = slugify(name);
       sections.push({
@@ -200,6 +222,18 @@ export function addLinkToResourcesMD(
     // Write back to file
     writeFileSync(RESOURCES_FILE, lines.join('\n'), 'utf-8');
 
+    // Verify write
+    const updatedContent = readFileSync(RESOURCES_FILE, 'utf-8');
+    if (!updatedContent.includes(`[${link.title}](${link.url})`)) {
+      return {
+        success: false,
+        error: `Verification failed for link "${link.title}"`,
+      };
+    }
+    logVerification(
+      `Added link "${link.title}" to category "${categorySlug}" in resources.md`,
+    );
+
     // Log the change
     const timestamp = new Date().toISOString();
     console.log(
@@ -289,20 +323,33 @@ export function addCategoryToResourcesMD(category: {
     lines.splice(insertIndex, 0, ...newSection);
 
     // Update the table of contents
-    const tocIndex = lines.findIndex(l =>
-      l.includes('- [UI Graphics](#ui-graphics)'),
-    );
-    if (tocIndex !== -1) {
+    const tocStartIndex = lines.findIndex(l => l.trim() === '## Table of Contents');
+    if (tocStartIndex !== -1) {
       const tocEntry = `- [${category.name}](#${categorySlug})`;
-      // Insert after the last TOC entry (before the first category)
-      const firstCategoryIndex = lines.findIndex(l => l.startsWith('## '));
-      if (firstCategoryIndex !== -1) {
-        lines.splice(firstCategoryIndex, 0, tocEntry);
+      let tocInsertIndex = tocStartIndex + 1;
+      while (
+        tocInsertIndex < lines.length &&
+        lines[tocInsertIndex].trim().startsWith('- [')
+      ) {
+        tocInsertIndex++;
+      }
+      if (!lines.slice(tocStartIndex, tocInsertIndex).includes(tocEntry)) {
+        lines.splice(tocInsertIndex, 0, tocEntry);
       }
     }
 
     // Write back to file
     writeFileSync(RESOURCES_FILE, lines.join('\n'), 'utf-8');
+
+    // Verify write
+    const updatedContent = readFileSync(RESOURCES_FILE, 'utf-8');
+    if (!updatedContent.includes(`## ${category.name}`)) {
+      return {
+        success: false,
+        error: `Verification failed for category "${category.name}"`,
+      };
+    }
+    logVerification(`Added category "${category.name}" to resources.md`);
 
     // Log the change
     const timestamp = new Date().toISOString();
