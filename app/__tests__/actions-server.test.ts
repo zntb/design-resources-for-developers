@@ -47,15 +47,24 @@ jest.mock('@/lib/data', () => ({
   createLink: jest.fn(),
   updateLink: jest.fn(),
   deleteLink: jest.fn(),
+  getLinkById: jest.fn(),
   searchLinks: jest.fn(),
   searchLinksByCategory: jest.fn(),
   searchLinksWithCategorySlug: jest.fn(),
   incrementLinkClicks: jest.fn(),
+  getCategoryById: jest.fn(),
   SortOrder: 'newest',
 }));
 jest.mock('@/lib/admin-auth');
 jest.mock('next/cache', () => ({
   revalidatePath: jest.fn(),
+}));
+jest.mock('@/lib/resources-md', () => ({
+  addLinkToResourcesMD: jest.fn().mockReturnValue({ success: true }),
+  addCategoryToResourcesMD: jest.fn().mockReturnValue({ success: true }),
+  updateLinkInResourcesMD: jest.fn().mockReturnValue({ success: true }),
+  deleteLinkFromResourcesMD: jest.fn().mockReturnValue({ success: true }),
+  deleteCategoryFromResourcesMD: jest.fn().mockReturnValue({ success: true }),
 }));
 
 import * as data from '@/lib/data';
@@ -179,6 +188,14 @@ describe('Server Actions', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
+      mockData.getCategoryById.mockResolvedValue({
+        id: '1',
+        name: 'Test Category',
+        slug: 'test-category',
+        order: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
       const formData = new FormData();
       formData.append('title', 'Test Link');
@@ -218,6 +235,25 @@ describe('Server Actions', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
+      mockData.getLinkById.mockResolvedValue({
+        id: '123',
+        title: 'Old Link',
+        url: 'https://old.com',
+        categoryId: '1',
+        clicks: 0,
+        isFeatured: false,
+        description: 'Old description',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      mockData.getCategoryById.mockResolvedValue({
+        id: '1',
+        name: 'Test Category',
+        slug: 'test-category',
+        order: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
       const formData = new FormData();
       formData.append('id', '123');
@@ -238,6 +274,25 @@ describe('Server Actions', () => {
   describe('deleteLinkAction', () => {
     it('should delete a link successfully', async () => {
       mockData.deleteLink.mockResolvedValue(true);
+      mockData.getLinkById.mockResolvedValue({
+        id: '123',
+        title: 'Test Link',
+        url: 'https://test.com',
+        categoryId: '1',
+        clicks: 0,
+        isFeatured: false,
+        description: 'Test description',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      mockData.getCategoryById.mockResolvedValue({
+        id: '1',
+        name: 'Test Category',
+        slug: 'test-category',
+        order: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
       const formData = new FormData();
       formData.append('id', '123');
