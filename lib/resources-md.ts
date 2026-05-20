@@ -1,17 +1,8 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { dirname, join } from 'path';
-import { fileURLToPath } from 'url';
 import { slugify } from './utils';
 
 function resolveResourcesFilePath(): string {
-  // First, resolve from the repository root relative to this file.
-  // This avoids relying on process cwd, which may differ in server action runtimes.
-  const moduleDir = dirname(fileURLToPath(import.meta.url));
-  const repoRootCandidate = join(moduleDir, '..', 'resources.md');
-  if (existsSync(repoRootCandidate)) {
-    return repoRootCandidate;
-  }
-
   // Next.js server actions may execute with a cwd different from the repo root.
   // Walk up from cwd until we find resources.md.
   let currentDir = process.cwd();
