@@ -43,7 +43,9 @@ function isCategorySectionHeading(lines: string[], index: number): boolean {
 
   // Treat all level-2 headings (except the TOC heading) as category sections.
   // Some sections may vary in table formatting, so table-based detection is brittle.
-  return Boolean(header?.startsWith('## ') && header !== '## table of contents');
+  return Boolean(
+    header?.startsWith('## ') && header !== '## table of contents',
+  );
 }
 
 function logVerification(message: string): void {
@@ -145,12 +147,11 @@ function findFirstDataRowLine(
     lineIndex++;
   }
 
-  // Skip the table header and separator
+  // Skip lines until we find the first data row (line that includes '| [')
   while (
     lineIndex < lines.length &&
     lineIndex <= endLine &&
-    !lines[lineIndex].includes('| [') &&
-    lines[lineIndex].trim() !== ''
+    !lines[lineIndex].includes('| [')
   ) {
     lineIndex++;
   }
@@ -242,29 +243,54 @@ export function addLinkToResourcesMD(
     // Find the insertion point (after the table header and separator)
     let insertIndex = section.startLine + 1;
 
-    // Skip the description line if present (starts with >)
-    if (lines[insertIndex]?.trim().startsWith('>')) {
-      insertIndex++;
-    }
-
-    // Skip the table header and separator
+    // Skip empty lines after the section header
     while (
       insertIndex < lines.length &&
       insertIndex <= section.endLine &&
-      !lines[insertIndex].includes('| [') &&
-      lines[insertIndex].trim() !== ''
+      lines[insertIndex]?.trim() === ''
     ) {
       insertIndex++;
     }
 
-    // If we went past the end of the section, back up to the last valid line
-    if (insertIndex > section.endLine) {
-      insertIndex = section.endLine;
+    // Skip the description line if present (starts with >) and any empty lines after it
+    if (
+      insertIndex < lines.length &&
+      insertIndex <= section.endLine &&
+      lines[insertIndex]?.trim().startsWith('>')
+    ) {
+      insertIndex++; // Skip the description line
+      // Skip any empty lines after the description
+      while (
+        insertIndex < lines.length &&
+        insertIndex <= section.endLine &&
+        lines[insertIndex]?.trim() === ''
+      ) {
+        insertIndex++;
+      }
     }
 
-    // If the current line is not empty, we need to find the next empty line or end of section
-    // But for simplicity and correctness, we'll insert right after the table structure
-    // which is what we've already positioned ourselves at
+    // Skip the table header line
+    if (
+      insertIndex < lines.length &&
+      insertIndex <= section.endLine &&
+      lines[insertIndex]?.includes('Website') &&
+      lines[insertIndex]?.includes('|')
+    ) {
+      insertIndex++;
+    }
+
+    // Skip the separator line
+    if (
+      insertIndex < lines.length &&
+      insertIndex <= section.endLine &&
+      lines[insertIndex]?.includes('|') &&
+      lines[insertIndex]?.includes('-'.repeat(10)) // at least 10 consecutive hyphens
+    ) {
+      insertIndex++;
+    }
+
+    // Now insertIndex points to where we should insert the new link
+    // (either before the first existing link, or at the end of the section if no links exist)
 
     // Insert the new entry
     const newEntry = formatLinkEntry(link);
@@ -374,7 +400,9 @@ export function addCategoryToResourcesMD(category: {
     lines.splice(insertIndex, 0, ...newSection);
 
     // Update the table of contents
-    const tocStartIndex = lines.findIndex(l => l.trim() === '## Table of Contents');
+    const tocStartIndex = lines.findIndex(
+      l => l.trim() === '## Table of Contents',
+    );
     if (tocStartIndex !== -1) {
       const tocEntry = `- [${category.name}](#${categorySlug})`;
       let tocInsertIndex = tocStartIndex + 1;
