@@ -12,10 +12,11 @@ export default async function NotFound() {
         <p className='text-lg text-slate-500 dark:text-slate-400 mb-6'>
           Page not found
         </p>
-        <Link href='/'>
-          <a className='inline-flex items-center px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors'>
-            Go to Home
-          </a>
+        <Link
+          href='/'
+          className='inline-flex items-center px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors'
+        >
+          Go to Home
         </Link>
       </div>
     </div>
