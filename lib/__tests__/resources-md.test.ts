@@ -25,6 +25,21 @@ describe('resources-md functions', () => {
     <b><a href="#table-of-contents">↥ Back To Top</a></b>
 </div>`;
 
+  // Content with Windows-style \r\n line endings to test CRLF handling
+  const mockContentWithCRLF = `## Table of Contents\r
+\r
+## Others\r
+\r
+> Uncategorized Stuff\r
+\r
+| Website&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | Description                                                                                                                                                                                        |\r
+| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |\r
+| [Existing Link](https://existing.com) | An existing link for testing                                                                                                                   |\r
+\r
+<div align="right">\r
+    <b><a href="#table-of-contents">↥ Back To Top</a></b>\r
+</div>`;
+
   let writtenContent: string | null = null;
 
   beforeEach(() => {
@@ -94,6 +109,39 @@ describe('resources-md functions', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('already exists');
+    });
+
+    it('should handle Windows-style CRLF line endings (\\r\\n) in resources.md', () => {
+      // Simulate a resources.md file with Windows-style line endings
+      writtenContent = null;
+      (readFileSync as jest.Mock).mockImplementation(() => {
+        if (writtenContent !== null) {
+          return writtenContent;
+        }
+        return mockContentWithCRLF;
+      });
+
+      const testLink = {
+        title: 'CRLF Test Link',
+        url: 'https://crlf-test.example.com',
+        description: 'Testing CRLF line ending handling',
+      };
+
+      const result = addLinkToResourcesMD(
+        'test-category-id',
+        'others',
+        'Others',
+        testLink,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('Added link');
+      expect(writeFileSync).toHaveBeenCalled();
+
+      const finalWrittenContent = writtenContent;
+      expect(finalWrittenContent).toContain(
+        '[CRLF Test Link](https://crlf-test.example.com)',
+      );
     });
   });
 });

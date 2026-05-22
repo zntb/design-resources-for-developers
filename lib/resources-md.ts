@@ -203,7 +203,7 @@ export function addLinkToResourcesMD(
       return { success: false, error: 'resources.md file not found' };
     }
 
-    const content = readFileSync(RESOURCES_FILE, 'utf-8');
+    const content = readFileSync(RESOURCES_FILE, 'utf-8').replace(/\r/g, '');
     const lines = content.split('\n');
     const sections = parseCategorySections(content);
 
@@ -299,7 +299,7 @@ export function addCategoryToResourcesMD(category: {
       return { success: false, error: 'resources.md file not found' };
     }
 
-    const content = readFileSync(RESOURCES_FILE, 'utf-8');
+    const content = readFileSync(RESOURCES_FILE, 'utf-8').replace(/\r/g, '');
     const lines = content.split('\n');
     const sections = parseCategorySections(content);
 
@@ -406,7 +406,7 @@ export function updateTableOfContents(): { success: boolean; error?: string } {
       return { success: false, error: 'resources.md file not found' };
     }
 
-    const content = readFileSync(RESOURCES_FILE, 'utf-8');
+    const content = readFileSync(RESOURCES_FILE, 'utf-8').replace(/\r/g, '');
     const lines = content.split('\n');
     const sections = parseCategorySections(content);
 
@@ -455,7 +455,7 @@ export function updateLinkInResourcesMD(
       return { success: false, error: 'resources.md file not found' };
     }
 
-    const content = readFileSync(RESOURCES_FILE, 'utf-8');
+    const content = readFileSync(RESOURCES_FILE, 'utf-8').replace(/\r/g, '');
     const lines = content.split('\n');
     const sections = parseCategorySections(content);
 
@@ -527,7 +527,7 @@ export function deleteLinkFromResourcesMD(
       return { success: false, error: 'resources.md file not found' };
     }
 
-    const content = readFileSync(RESOURCES_FILE, 'utf-8');
+    const content = readFileSync(RESOURCES_FILE, 'utf-8').replace(/\r/g, '');
     const lines = content.split('\n');
     const sections = parseCategorySections(content);
 
@@ -665,7 +665,7 @@ export function deleteCategoryFromResourcesMD(categorySlug: string): {
       return { success: false, error: 'resources.md file not found' };
     }
 
-    const content = readFileSync(RESOURCES_FILE, 'utf-8');
+    const content = readFileSync(RESOURCES_FILE, 'utf-8').replace(/\r/g, '');
     const lines = content.split('\n');
     const sections = parseCategorySections(content);
 
