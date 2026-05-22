@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentAdminEmail } from '@/lib/admin-auth';
 import { getCategories, getAllLinksPaginated } from '@/lib/data';
@@ -15,9 +14,14 @@ export default async function AdminPage() {
     <main className='mx-auto max-w-5xl p-6'>
       <div className='mb-8 flex items-center justify-between'>
         <h1 className='text-3xl font-bold'>Admin Dashboard</h1>
-        <Link href='/admin/logout' className='rounded border px-3 py-2 text-sm'>
-          Logout ({adminEmail})
-        </Link>
+        <form action='/admin/logout' method='POST'>
+          <button
+            type='submit'
+            className='rounded border px-3 py-2 text-sm hover:bg-gray-100'
+          >
+            Logout ({adminEmail})
+          </button>
+        </form>
       </div>
 
       <AdminPageContent categories={categories} links={links} />
