@@ -38,10 +38,16 @@ export async function createAdminSession(email: string): Promise<void> {
   const signature = sign(normalizedEmail);
   const cookieStore = await cookies();
 
+  // In production (Vercel), always use secure cookies
+  // Vercel serves all sites over HTTPS
+  // Use VERCEL === '1' to detect Vercel environment, which is more reliable than NODE_ENV
+  const isProduction =
+    process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+
   cookieStore.set(ADMIN_SESSION_COOKIE, `${normalizedEmail}:${signature}`, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProduction,
     path: '/',
     maxAge: SESSION_MAX_AGE_SECONDS,
   });
@@ -49,7 +55,20 @@ export async function createAdminSession(email: string): Promise<void> {
 
 export async function clearAdminSession(): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.delete(ADMIN_SESSION_COOKIE);
+  // In production (Vercel), always use secure cookies
+  const isProduction =
+    process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+
+  // To properly delete a cookie, we need to set it with the same options
+  // but with an empty value and past expiration date
+  cookieStore.set(ADMIN_SESSION_COOKIE, '', {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProduction,
+    path: '/',
+    maxAge: 0,
+    expires: new Date(0),
+  });
 }
 
 export async function getCurrentAdminEmail(): Promise<string | null> {
