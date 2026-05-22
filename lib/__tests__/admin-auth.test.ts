@@ -103,8 +103,18 @@ describe('admin-auth', () => {
     it('should clear the admin session', async () => {
       mockCookieStore.set('admin_session', 'dummy');
       await clearAdminSession();
-      expect(mockCookieStore.has('admin_session')).toBe(false);
-      expect(mockCookies.delete).toHaveBeenCalledWith('admin_session');
+      // The cookie is cleared by setting it with empty value and past expiration
+      // Check that set was called with the correct parameters
+      expect(mockCookies.set).toHaveBeenCalledWith(
+        'admin_session',
+        '',
+        expect.objectContaining({
+          httpOnly: true,
+          sameSite: 'lax',
+          path: '/',
+          maxAge: 0,
+        }),
+      );
     });
   });
 });
