@@ -3,8 +3,6 @@ import { dirname, join } from 'path';
 import { slugify } from './utils';
 
 function resolveResourcesFilePath(): string {
-  // Next.js server actions may execute with a cwd different from the repo root.
-  // Walk up from cwd until we find resources.md.
   let currentDir = process.cwd();
 
   while (true) {
@@ -40,10 +38,9 @@ interface CategorySection {
 
 function isCategorySectionHeading(lines: string[], index: number): boolean {
   const header = lines[index]?.trim().toLowerCase();
-
-  // Treat all level-2 headings (except the TOC heading) as category sections.
-  // Some sections may vary in table formatting, so table-based detection is brittle.
-  return Boolean(header?.startsWith('## ') && header !== '## table of contents');
+  return Boolean(
+    header?.startsWith('## ') && header !== '## table of contents',
+  );
 }
 
 function logVerification(message: string): void {
@@ -60,7 +57,6 @@ function parseCategorySections(content: string): CategorySection[] {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // Match category headers: ## Category Name
     const headerMatch = line.match(/^##\s+(.+)$/);
     if (headerMatch && isCategorySectionHeading(lines, i)) {
       const name = headerMatch[1].trim();
@@ -69,12 +65,11 @@ function parseCategorySections(content: string): CategorySection[] {
         name,
         slug,
         startLine: i,
-        endLine: -1, // Will be set when we find the next section
+        endLine: -1,
       });
     }
   }
 
-  // Set end lines for each section
   for (let i = 0; i < sections.length; i++) {
     if (i < sections.length - 1) {
       sections[i].endLine = sections[i + 1].startLine - 1;
@@ -131,31 +126,34 @@ function findCategorySectionBySlugOrName(
 }
 
 /**
- * Find the first data row line in a section (after header/separator)
+ * Find the first data row line in a section (after the table separator row).
+ *
+ * The resources.md table structure is:
+ *   ## Section
+ *   (blank)
+ *   > description (optional)
+ *   (blank)
+ *   | Header | Description |
+ *   | --- | --- |              <-- separator row
+ *   | [First entry](...) | ... |   <-- we want to insert HERE
+ *
+ * We locate the separator row by looking for a line that starts with `|`
+ * and contains `---`, then return the index immediately after it.
  */
 function findFirstDataRowLine(
   lines: string[],
   startLine: number,
   endLine: number,
 ): number {
-  let lineIndex = startLine + 1;
-
-  // Skip the description line if present (starts with >)
-  if (lines[lineIndex]?.trim().startsWith('>')) {
-    lineIndex++;
+  for (let i = startLine + 1; i <= endLine; i++) {
+    const trimmed = lines[i]?.trim() ?? '';
+    if (trimmed.startsWith('|') && trimmed.includes('---')) {
+      return i + 1; // first data row is right after the separator
+    }
   }
 
-  // Skip the table header and separator
-  while (
-    lineIndex < lines.length &&
-    lineIndex <= endLine &&
-    !lines[lineIndex].includes('| [') &&
-    lines[lineIndex].trim() !== ''
-  ) {
-    lineIndex++;
-  }
-
-  return lineIndex;
+  // Fallback: no table separator found – return just past the start line
+  return startLine + 1;
 }
 
 /**
@@ -171,7 +169,6 @@ function entryExistsInSection(
   const firstDataRow = findFirstDataRowLine(lines, startLine, endLine);
   for (let i = firstDataRow; i <= endLine; i++) {
     const line = lines[i];
-    // Check for markdown table row format: | [Title](url) |
     if (line.includes(`[${title}](${url})`)) {
       return true;
     }
@@ -186,13 +183,14 @@ function formatLinkEntry(entry: ResourcesMDEntry): string {
   const title = entry.title;
   const url = entry.url;
   const description = entry.description || '';
-
-  // Format: | [Title](url) | Description |
   return `| [${title}](${url}) | ${description} |`;
 }
 
 /**
- * Add a new link entry to a category section
+ * Add a new link entry to a category section.
+ *
+ * The entry is inserted right after the table separator row so it becomes
+ * the first row in the table, keeping the markdown table valid.
  */
 export function addLinkToResourcesMD(
   categoryId: string,
@@ -205,7 +203,7 @@ export function addLinkToResourcesMD(
       return { success: false, error: 'resources.md file not found' };
     }
 
-    const content = readFileSync(RESOURCES_FILE, 'utf-8');
+    const content = readFileSync(RESOURCES_FILE, 'utf-8').replace(/\r/g, '');
     const lines = content.split('\n');
     const sections = parseCategorySections(content);
 
@@ -239,32 +237,19 @@ export function addLinkToResourcesMD(
       };
     }
 
-    // Find the insertion point (after the table header and separator)
-    let insertIndex = section.startLine + 1;
+    // Find the insertion point: right after the table separator row (| --- |)
+    const insertIndex = findFirstDataRowLine(
+      lines,
+      section.startLine,
+      section.endLine,
+    );
 
-    // Skip the description line if present (starts with >)
-    if (lines[insertIndex]?.trim().startsWith('>')) {
-      insertIndex++;
+    if (insertIndex <= section.startLine || insertIndex > section.endLine + 1) {
+      return {
+        success: false,
+        error: `Could not locate table separator row in section "${categorySlug}"`,
+      };
     }
-
-    // Skip the table header and separator
-    while (
-      insertIndex < lines.length &&
-      insertIndex <= section.endLine &&
-      !lines[insertIndex].includes('| [') &&
-      lines[insertIndex].trim() !== ''
-    ) {
-      insertIndex++;
-    }
-
-    // If we went past the end of the section, back up to the last valid line
-    if (insertIndex > section.endLine) {
-      insertIndex = section.endLine;
-    }
-
-    // If the current line is not empty, we need to find the next empty line or end of section
-    // But for simplicity and correctness, we'll insert right after the table structure
-    // which is what we've already positioned ourselves at
 
     // Insert the new entry
     const newEntry = formatLinkEntry(link);
@@ -285,7 +270,6 @@ export function addLinkToResourcesMD(
       `Added link "${link.title}" to category "${categorySlug}" in resources.md`,
     );
 
-    // Log the change
     const timestamp = new Date().toISOString();
     console.log(
       `[${timestamp}] Added link "${link.title}" to category "${categorySlug}" in resources.md`,
@@ -315,7 +299,7 @@ export function addCategoryToResourcesMD(category: {
       return { success: false, error: 'resources.md file not found' };
     }
 
-    const content = readFileSync(RESOURCES_FILE, 'utf-8');
+    const content = readFileSync(RESOURCES_FILE, 'utf-8').replace(/\r/g, '');
     const lines = content.split('\n');
     const sections = parseCategorySections(content);
 
@@ -338,13 +322,10 @@ export function addCategoryToResourcesMD(category: {
       }
     }
 
-    // If no "Others" section, insert at the end
     if (insertIndex === lines.length) {
-      // Find the last category section
       if (sections.length > 0) {
         insertIndex = sections[sections.length - 1].endLine + 1;
       } else {
-        // No sections found, insert after table of contents
         for (let i = 0; i < lines.length; i++) {
           if (lines[i].startsWith('## ')) {
             insertIndex = i;
@@ -354,7 +335,6 @@ export function addCategoryToResourcesMD(category: {
       }
     }
 
-    // Create the new category section
     const newSection = [
       '',
       `## ${category.name}`,
@@ -370,11 +350,11 @@ export function addCategoryToResourcesMD(category: {
       '',
     ];
 
-    // Insert the new section
     lines.splice(insertIndex, 0, ...newSection);
 
-    // Update the table of contents
-    const tocStartIndex = lines.findIndex(l => l.trim() === '## Table of Contents');
+    const tocStartIndex = lines.findIndex(
+      l => l.trim() === '## Table of Contents',
+    );
     if (tocStartIndex !== -1) {
       const tocEntry = `- [${category.name}](#${categorySlug})`;
       let tocInsertIndex = tocStartIndex + 1;
@@ -389,10 +369,8 @@ export function addCategoryToResourcesMD(category: {
       }
     }
 
-    // Write back to file
     writeFileSync(RESOURCES_FILE, lines.join('\n'), 'utf-8');
 
-    // Verify write
     const updatedContent = readFileSync(RESOURCES_FILE, 'utf-8');
     if (!updatedContent.includes(`## ${category.name}`)) {
       return {
@@ -402,7 +380,6 @@ export function addCategoryToResourcesMD(category: {
     }
     logVerification(`Added category "${category.name}" to resources.md`);
 
-    // Log the change
     const timestamp = new Date().toISOString();
     console.log(
       `[${timestamp}] Added category "${category.name}" to resources.md`,
@@ -429,26 +406,22 @@ export function updateTableOfContents(): { success: boolean; error?: string } {
       return { success: false, error: 'resources.md file not found' };
     }
 
-    const content = readFileSync(RESOURCES_FILE, 'utf-8');
+    const content = readFileSync(RESOURCES_FILE, 'utf-8').replace(/\r/g, '');
     const lines = content.split('\n');
     const sections = parseCategorySections(content);
 
-    // Find the table of contents section
     const tocStart = lines.findIndex(l => l.includes('## Table of Contents'));
     if (tocStart === -1) {
       return { success: false, error: 'Table of contents not found' };
     }
 
-    // Find the end of the TOC (next ## section)
     let tocEnd = tocStart + 1;
     while (tocEnd < lines.length && !lines[tocEnd].startsWith('## ')) {
       tocEnd++;
     }
 
-    // Build new TOC entries
     const tocEntries = sections.map(s => `- [${s.name}](#${s.slug})`);
 
-    // Replace the TOC
     const newLines = [
       ...lines.slice(0, tocStart + 1),
       '',
@@ -482,11 +455,10 @@ export function updateLinkInResourcesMD(
       return { success: false, error: 'resources.md file not found' };
     }
 
-    const content = readFileSync(RESOURCES_FILE, 'utf-8');
+    const content = readFileSync(RESOURCES_FILE, 'utf-8').replace(/\r/g, '');
     const lines = content.split('\n');
     const sections = parseCategorySections(content);
 
-    // Find the category section
     const section = findCategorySectionBySlugOrName(
       sections,
       categorySlug,
@@ -500,7 +472,6 @@ export function updateLinkInResourcesMD(
       };
     }
 
-    // Find and update the link entry
     let found = false;
     const firstDataRow = findFirstDataRowLine(
       lines,
@@ -509,9 +480,7 @@ export function updateLinkInResourcesMD(
     );
     for (let i = firstDataRow; i <= section.endLine; i++) {
       const line = lines[i];
-      // Check for markdown table row format: | [Title](url) |
       if (line.includes(`[${oldTitle}](${oldUrl})`)) {
-        // Replace the line with the updated entry
         lines[i] = formatLinkEntry(newLink);
         found = true;
         break;
@@ -525,10 +494,8 @@ export function updateLinkInResourcesMD(
       };
     }
 
-    // Write back to file
     writeFileSync(RESOURCES_FILE, lines.join('\n'), 'utf-8');
 
-    // Log the change
     const timestamp = new Date().toISOString();
     console.log(
       `[${timestamp}] Updated link "${oldTitle}" to "${newLink.title}" in category "${categorySlug}" in resources.md`,
@@ -560,11 +527,10 @@ export function deleteLinkFromResourcesMD(
       return { success: false, error: 'resources.md file not found' };
     }
 
-    const content = readFileSync(RESOURCES_FILE, 'utf-8');
+    const content = readFileSync(RESOURCES_FILE, 'utf-8').replace(/\r/g, '');
     const lines = content.split('\n');
     const sections = parseCategorySections(content);
 
-    // Find the category section
     const section = findCategorySectionBySlugOrName(
       sections,
       categorySlug,
@@ -578,7 +544,6 @@ export function deleteLinkFromResourcesMD(
       };
     }
 
-    // Find and remove the link entry
     let found = false;
     const firstDataRow = findFirstDataRowLine(
       lines,
@@ -587,7 +552,6 @@ export function deleteLinkFromResourcesMD(
     );
     for (let i = firstDataRow; i <= section.endLine; i++) {
       const line = lines[i];
-      // Check for markdown table row format: | [Title](url) |
       if (line.includes(`[${title}](${url})`)) {
         lines.splice(i, 1);
         found = true;
@@ -602,10 +566,8 @@ export function deleteLinkFromResourcesMD(
       };
     }
 
-    // Write back to file
     writeFileSync(RESOURCES_FILE, lines.join('\n'), 'utf-8');
 
-    // Log the change
     const timestamp = new Date().toISOString();
     console.log(
       `[${timestamp}] Deleted link "${title}" from category "${categorySlug}" in resources.md`,
@@ -640,7 +602,6 @@ export function updateCategoryInResourcesMD(
     const lines = content.split('\n');
     const sections = parseCategorySections(content);
 
-    // Find the category section
     const section = findCategorySectionBySlugOrName(sections, oldSlug, oldName);
 
     if (!section) {
@@ -652,10 +613,8 @@ export function updateCategoryInResourcesMD(
 
     const newSlug = slugify(newCategory.name);
 
-    // Update the category header
     lines[section.startLine] = `## ${newCategory.name}`;
 
-    // Update the description if present
     const descIndex = section.startLine + 1;
     if (lines[descIndex]?.trim().startsWith('>')) {
       if (newCategory.description) {
@@ -667,7 +626,6 @@ export function updateCategoryInResourcesMD(
       lines.splice(descIndex, 0, `> ${newCategory.description}`);
     }
 
-    // Update the table of contents
     const tocIndex = lines.findIndex(l =>
       l.includes(`- [${section.name}](#${oldSlug})`),
     );
@@ -675,10 +633,8 @@ export function updateCategoryInResourcesMD(
       lines[tocIndex] = `- [${newCategory.name}](#${newSlug})`;
     }
 
-    // Write back to file
     writeFileSync(RESOURCES_FILE, lines.join('\n'), 'utf-8');
 
-    // Log the change
     const timestamp = new Date().toISOString();
     console.log(
       `[${timestamp}] Updated category "${section.name}" to "${newCategory.name}" in resources.md`,
@@ -709,11 +665,10 @@ export function deleteCategoryFromResourcesMD(categorySlug: string): {
       return { success: false, error: 'resources.md file not found' };
     }
 
-    const content = readFileSync(RESOURCES_FILE, 'utf-8');
+    const content = readFileSync(RESOURCES_FILE, 'utf-8').replace(/\r/g, '');
     const lines = content.split('\n');
     const sections = parseCategorySections(content);
 
-    // Find the category section
     const section = findCategorySectionBySlugOrName(
       sections,
       categorySlug,
@@ -729,10 +684,8 @@ export function deleteCategoryFromResourcesMD(categorySlug: string): {
 
     const categoryName = section.name;
 
-    // Remove the entire section (from startLine to endLine)
     lines.splice(section.startLine, section.endLine - section.startLine + 1);
 
-    // Update the table of contents
     const tocIndex = lines.findIndex(l =>
       l.includes(`- [${categoryName}](#${categorySlug})`),
     );
@@ -740,10 +693,8 @@ export function deleteCategoryFromResourcesMD(categorySlug: string): {
       lines.splice(tocIndex, 1);
     }
 
-    // Write back to file
     writeFileSync(RESOURCES_FILE, lines.join('\n'), 'utf-8');
 
-    // Log the change
     const timestamp = new Date().toISOString();
     console.log(
       `[${timestamp}] Deleted category "${categoryName}" from resources.md`,
