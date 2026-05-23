@@ -26,9 +26,19 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
           elif [[ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]]; then
-            git diff --name-only "${{ github.event.before }}" "${{ github.sha }}"
+            BEFORE_SHA="${{ github.event.before }}"
+            AFTER_SHA="${{ github.sha }}"
+
+            if git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+              git diff --name-only "${BEFORE_SHA}" "${AFTER_SHA}"
+            else
+              echo "Previous commit ${BEFORE_SHA} is not available locally (e.g., force-push/history rewrite)."
+              echo "Falling back to listing files from the current commit."
+              git diff-tree --no-commit-id --name-only -r "${AFTER_SHA}"
+            fi
           else
-            echo "Initial push detected; skipping diff."
+            echo "Initial push detected; listing files from the current commit."
+            git diff-tree --no-commit-id --name-only -r "${{ github.sha }}"
           fi
 
   analyze:
