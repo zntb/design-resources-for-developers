@@ -12,13 +12,39 @@ on:
     - cron: '0 0 * * 0'
 
 jobs:
+  check-changes:
+    name: Check Changed Files
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.check.outputs.should_skip }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Check if only resources.md changed
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD 2>/dev/null || echo "")
+            if [[ -z "$CHANGED_FILES" ]] || [[ "$CHANGED_FILES" == "resources.md" ]]; then
+              echo "should_skip=true" >> $GITHUB_OUTPUT
+            else
+              echo "should_skip=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+          fi
+
   analyze:
     name: Analyze
+    needs: check-changes
     runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
       security-events: write
+    if: ${{ needs.check-changes.outputs.should_skip != 'true' }}
 
     strategy:
       fail-fast: false
