@@ -5,9 +5,6 @@ on:
     branches: ['master', 'dev']
   pull_request:
     branches: ['master']
-    paths-ignore:
-      - 'resources.md'
-      - 'auto-update/**'
   schedule:
     - cron: '0 0 * * 0'
 
@@ -21,15 +18,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
       - name: Check if only resources.md changed
         id: check
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            CHANGED_FILES=$(git diff --name-only HEAD^ HEAD 2>/dev/null || echo "")
-            if [[ -z "$CHANGED_FILES" ]] || [[ "$CHANGED_FILES" == "resources.md" ]]; then
+            # Get the list of changed files between base and head
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} 2>/dev/null || echo "")
+            # Check if ONLY resources.md is changed (skip CodeQL if so)
+            if [[ "$CHANGED_FILES" == "resources.md" ]]; then
+              # Only resources.md changed - skip CodeQL
               echo "should_skip=true" >> $GITHUB_OUTPUT
             else
+              # Other files changed - run CodeQL
               echo "should_skip=false" >> $GITHUB_OUTPUT
             fi
           else
