@@ -18,8 +18,8 @@ concurrency:
 
 env:
   COMMIT_MESSAGE: 'chore: update resources.md from database'
-  # Use a PAT/GitHub App token when available so downstream pull_request checks are triggered.
-  WORKFLOW_GIT_TOKEN: ${{ secrets.AUTO_UPDATE_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+  # Must be a PAT/GitHub App token so pull_request/push workflows trigger for auto-update commits.
+  WORKFLOW_GIT_TOKEN: ${{ secrets.AUTO_UPDATE_GITHUB_TOKEN }}
 
 jobs:
   export:
@@ -27,6 +27,14 @@ jobs:
     environment: production
 
     steps:
+      - name: Validate automation token
+        run: |
+          if [ -z "${{ env.WORKFLOW_GIT_TOKEN }}" ]; then
+            echo "AUTO_UPDATE_GITHUB_TOKEN is required.
+            Using GITHUB_TOKEN suppresses downstream CodeQL pull_request/push workflows for bot-created commits and PRs."
+                    exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
