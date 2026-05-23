@@ -2,11 +2,12 @@ name: 'CodeQL'
 
 on:
   push:
-    branches: ['master', 'dev', 'auto-update/resources-md']
+    branches: ['master', 'dev']
   pull_request:
     branches: ['master']
     paths-ignore:
       - 'resources.md'
+      - 'auto-update/**'
   schedule:
     - cron: '0 0 * * 0'
 
