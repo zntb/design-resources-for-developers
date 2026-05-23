@@ -9,43 +9,13 @@ on:
     - cron: '0 0 * * 0'
 
 jobs:
-  check-changes:
-    name: Check Changed Files
-    runs-on: ubuntu-latest
-    outputs:
-      should_skip: ${{ steps.check.outputs.should_skip }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Check if only resources.md changed
-        id: check
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            # Get the list of changed files between base and head
-            CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} 2>/dev/null || echo "")
-            # Check if ONLY resources.md is changed (skip CodeQL if so)
-            if [[ "$CHANGED_FILES" == "resources.md" ]]; then
-              # Only resources.md changed - skip CodeQL
-              echo "should_skip=true" >> $GITHUB_OUTPUT
-            else
-              # Other files changed - run CodeQL
-              echo "should_skip=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "should_skip=false" >> $GITHUB_OUTPUT
-          fi
-
   analyze:
     name: Analyze
-    needs: check-changes
     runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
       security-events: write
-    if: ${{ needs.check-changes.outputs.should_skip != 'true' }}
 
     strategy:
       fail-fast: false
