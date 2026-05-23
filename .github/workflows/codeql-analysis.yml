@@ -9,8 +9,28 @@ on:
     - cron: '0 0 * * 0'
 
 jobs:
+  check-changes:
+    name: Check Changed Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: List changed files
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}"
+          elif [[ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]]; then
+            git diff --name-only "${{ github.event.before }}" "${{ github.sha }}"
+          else
+            echo "Initial push detected; skipping diff."
+          fi
+
   analyze:
     name: Analyze
+    needs: check-changes
     runs-on: ubuntu-latest
     permissions:
       actions: read
