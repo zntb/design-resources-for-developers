@@ -18,6 +18,16 @@ async function exportToMarkdown() {
       },
     },
   });
+  const reservedCategorySlugs = new Set(['table-of-contents']);
+  const reservedCategoryNames = new Set([
+    'Table of Contents',
+    'Please read [`contributing guidelines`](./contributing.md) before submitting new resources.',
+  ]);
+  const contentCategories = categories.filter(
+    category =>
+      !reservedCategorySlugs.has(category.slug) &&
+      !reservedCategoryNames.has(category.name),
+  );
 
   // Build the markdown content
   const lines: string[] = [];
@@ -52,13 +62,13 @@ async function exportToMarkdown() {
   lines.push('- [Table of Contents](#table-of-contents)');
 
   // Table of contents entries
-  for (const category of categories) {
+  for (const category of contentCategories) {
     lines.push(`- [${category.name}](#${category.slug})`);
   }
   lines.push('');
 
   // Category sections
-  for (const category of categories) {
+  for (const category of contentCategories) {
     lines.push(`## ${category.name}`);
     lines.push('');
 
@@ -74,7 +84,6 @@ async function exportToMarkdown() {
     lines.push(
       '| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |',
     );
-    lines.push('');
 
     // Table rows
     for (const link of category.links) {
@@ -99,7 +108,7 @@ async function exportToMarkdown() {
 
   console.log(`✅ Successfully exported to ${outputPath}`);
   console.log(
-    `   Categories: ${categories.length}, Links: ${categories.reduce(
+    `   Categories: ${contentCategories.length}, Links: ${contentCategories.reduce(
       (sum, cat) => sum + cat.links.length,
       0,
     )}`,
