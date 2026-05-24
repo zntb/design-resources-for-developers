@@ -57,6 +57,8 @@ Available for MacOS, Linux, & Windows<br>
 
 ## Table of Contents
 
+> <b><a href="#table-of-contents">↥ Back To Top</a></b>
+
 | Website&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | Description |
 | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 
@@ -65,6 +67,8 @@ Available for MacOS, Linux, & Windows<br>
 </div>
 
 ## Please read [`contributing guidelines`](./contributing.md) before submitting new resources.
+
+> <b><a href="#table-of-contents">↥ Back To Top</a></b>
 
 | Website&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | Description |
 | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
