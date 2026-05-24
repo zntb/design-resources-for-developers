@@ -64,6 +64,10 @@ function parseLinksFromSection(
  */
 function extractSections(content: string): Map<string, string> {
   const sections = new Map<string, string>();
+  const ignoredSectionTitles = new Set([
+    'Table of Contents',
+    'Please read [`contributing guidelines`](./contributing.md) before submitting new resources.',
+  ]);
 
   // Split by category headers (##)
   // Match: ## Category Name
@@ -83,6 +87,12 @@ function extractSections(content: string): Map<string, string> {
     // Extract section content (from end of header to start of next header)
     const sectionStart = match.index + match[0].length;
     const sectionContent = content.slice(sectionStart, nextSectionStart);
+
+    const hasTableHeader =
+      sectionContent.includes('| Website') && sectionContent.includes('| ---');
+    if (ignoredSectionTitles.has(categoryTitle) || !hasTableHeader) {
+      continue;
+    }
 
     sections.set(categoryTitle, sectionContent);
   }
