@@ -53,6 +53,28 @@ Available for MacOS, Linux, & Windows<br>
 - [AI Graphic Design Tools](#ai-graphic-design-tools)
 - [Others](#others)
 
+## Table of Contents
+
+> <b><a href="#table-of-contents">↥ Back To Top</a></b>
+
+| Website&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | Description |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+
+<div align="right">
+    <b><a href="#table-of-contents">↥ Back To Top</a></b>
+</div>
+
+## Please read [`contributing guidelines`](./contributing.md) before submitting new resources.
+
+> <b><a href="#table-of-contents">↥ Back To Top</a></b>
+
+| Website&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; | Description |
+| -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+
+<div align="right">
+    <b><a href="#table-of-contents">↥ Back To Top</a></b>
+</div>
+
 ## UI Graphics
 
 > Websites and resources with modern UI components in different formats such as PSD, Sketch, Figma, etc.
